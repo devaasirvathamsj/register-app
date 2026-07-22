@@ -19,8 +19,8 @@ pipeline {
         stage('Checkout from SCM') {
             steps {
                 git branch: 'main',
-                credentialsId: 'github',
-                url: 'https://github.com/devaasirvathamsj/register-app.git'
+                    credentialsId: 'github',
+                    url: 'https://github.com/devaasirvathamsj/register-app.git'
             }
         }
 
@@ -39,9 +39,17 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    withSonarQubeEnv(credentialsId: 'jenkins-sonar-qube-token' ) {
+                    withSonarQubeEnv(credentialsId: 'jenkins-sonar-qube-token') {
                         sh 'mvn sonar:sonar'
                     }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'jenkins-sonar-qube-token'
                 }
             }
         }
