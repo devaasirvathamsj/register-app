@@ -76,3 +76,37 @@ variable "private_subnet_1b_name" {
     default     = "demo-private-subnet-1b"
   
 }
+
+variable "internet_gateway_name" {
+    description = "Internet gateway name"
+    type        = string
+    default     = "demo-internet-gateway"
+  
+}
+
+variable "nat_gateway_name" {
+    description = "NAT gateway name"
+    type        = string
+    default     = "demo-nat-gateway"
+  
+}
+
+variable "public_route_table_name" {
+    description = "Public route table name"
+    type        = string
+    default     = "demo-public-route-table"
+    
+}
+
+variable "private_route_table_1a_name" {
+    description = "Private route table 1a name"
+    type        = string
+    default     = "demo-private-route-table-1a"
+  
+}
+
+variable "private_route_table_1b_name" {
+    description = "Private route table 1b name"
+    type        = string
+    default     = "demo-private-route-table-1b"
+}

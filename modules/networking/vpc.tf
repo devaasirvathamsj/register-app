@@ -1,7 +1,7 @@
-resource "aws_vpc" "demo_vpc" {
+resource "aws_vpc" "vpc" {
     cidr_block = var.vpc_cidr
 
     tags = {
-        name = var.vpc_name
+        Name = var.vpc_name
     }
 }
