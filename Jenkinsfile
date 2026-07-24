@@ -8,15 +8,6 @@ pipeline {
         maven 'Maven3'
     }
 
-    environment {
-        APP_NAME = "register-app-pipeline"
-        RELEASE = "1.0.0"
-        DOCKER_USER = "devaasirvatham"
-        DOCKER_PASS = "dockerhub"
-        IMAGE_NAME = "${DOCKER_USER}/${APP_NAME}"
-        IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
-    }
-
     stages {
 
         stage('Cleanup Workspace') {
@@ -42,61 +33,6 @@ pipeline {
         stage('Test Application') {
             steps {
                 sh 'mvn test'
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            steps {
-                script {
-                    withSonarQubeEnv(credentialsId: 'jenkins-sonar-qube-token') {
-                        sh 'mvn sonar:sonar'
-                    }
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            steps {
-                script {
-                    waitForQualityGate abortPipeline: false,
-                        credentialsId: 'jenkins-sonar-qube-token'
-                }
-            }
-        }
-
-        stage('Build & Push Docker Image') {
-            steps {
-                script {
-
-                    docker.withRegistry('', DOCKER_PASS) {
-
-                        def docker_image = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
-
-                        docker_image.push("${IMAGE_TAG}")
-
-                        sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
-
-                        docker_image.push("latest")
-                    }
-
-                }
-            }
-        }
-
-        stage('Trivy Scan') {
-            steps {
-                script {
-                    sh 'docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image devaasirvatham/register-app-pipeline:latest --no-progress --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --format table'
-                }
-            }
-        }
-
-        stage('Cleanup Artifacts') {
-            steps {
-                script {
-                    sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG}"
-                    sh "docker rmi ${IMAGE_NAME}:latest"
-                }
             }
         }
 
