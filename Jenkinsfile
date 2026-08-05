@@ -7,13 +7,11 @@ pipeline {
         maven 'Maven3'
     }
     environment {
-        APP_NAME = "register-app-1"
-        RELEASE = "1.0.0"
-        AWS_ACCOUNT_ID = "<your-account-id>"
-        AWS_REGION = "<your-region>"
-        ECR_REPO = "register-app"
-        IMAGE_NAME = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
-        IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
+        APP_NAME    = "register-app-1"
+        RELEASE     = "1.0.0"
+        AWS_REGION  = "us-east-1"
+        ECR_REPO    = "register-app"
+        IMAGE_TAG   = "${RELEASE}-${BUILD_NUMBER}"
         JENKINS_API_TOKEN = credentials('jenkins-api-token')
     }
     stages {
@@ -47,6 +45,14 @@ pipeline {
         stage("Quality Gate") {
             steps {
                 waitForQualityGate abortPipeline: true
+            }
+        }
+        stage("Resolve ECR Registry") {
+            steps {
+                script {
+                    AWS_ACCOUNT_ID = sh(script: "aws sts get-caller-identity --query Account --output text", returnStdout: true).trim()
+                    IMAGE_NAME = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
+                }
             }
         }
         stage("Build Docker Image") {
@@ -88,6 +94,25 @@ pipeline {
                 docker system prune -af || true
                 """
             }
+        }
+        stage("Trigger CD Pipeline") {
+            steps {
+                script {
+                    sh "curl -v -k --user deva_devops:${JENKINS_API_TOKEN} -X POST -H 'cache-control: no-cache' -H 'content-type: application/x-www-form-urlencoded' --data 'IMAGE_TAG=${IMAGE_TAG}' 'http://<jenkins-master-private-ip>:8080/job/gitops-register-app/buildWithParameters?token=gitops-token'"
+                }
+            }
+        }
+    }
+    post {
+        failure {
+            emailext body: '''${SCRIPT, template="groovy-html.template"}''',
+                     subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - Failed",
+                     mimeType: 'text/html', to: "devaasirvathamsj@gmail.com"
+        }
+        success {
+            emailext body: '''${SCRIPT, template="groovy-html.template"}''',
+                     subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - Successful",
+                     mimeType: 'text/html', to: "devaasirvathamsj@gmail.com"
         }
     }
 }
