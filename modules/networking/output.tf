@@ -4,28 +4,14 @@ output "vpc_id" {
   
 }
     
-output "public_subnet_1a_id" {
-    description = "The public Subnet 1a ID "
-    value = aws_subnet.public_subnet_1a.id
+output "private_subnet_ids" {
+  description = "List of private subnet IDs"
+  value       = [aws_subnet.private_subnet_1a.id, aws_subnet.private_subnet_1b.id]
 }
 
-output "public_subnet_1b_id" {
-    description = "The public Subnet 1b ID "
-    value = aws_subnet.public_subnet_1b.id
-  
-}
-
-
-output "private_subnet_1a_id" {
-    description = "The private Subnet 1a ID "
-    value = aws_subnet.private_subnet_1a.id
-  
-}
-
-output "private_subnet_1b_id" {
-    description = "The private Subnet 1b ID "
-    value = aws_subnet.private_subnet_1b.id
-  
+output "public_subnet_ids" {
+  description = "List of public subnet IDs"
+  value       = [aws_subnet.public_subnet_1a.id, aws_subnet.public_subnet_1b.id]
 }
 
 output "eip_id" {
