@@ -13,7 +13,7 @@ pipeline {
         ECR_REPO    = "register-app"
         IMAGE_TAG   = "${RELEASE}-${BUILD_NUMBER}"
         JENKINS_API_TOKEN = credentials('jenkins-api-token')
-        JENKINS_MASTER_URL = "http://<jenkins-master-private-ip>:8080"
+        JENKINS_MASTER_URL = "http://10.0.2.35:8080"
     }
     stages {
         stage("Cleanup Workspace") {
