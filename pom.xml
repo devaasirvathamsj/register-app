@@ -15,7 +15,7 @@
     <project.build.sourceEncoding>utf-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>utf-8</project.reporting.outputEncoding>
     <sonar.projectKey>register-app</sonar.projectKey>
-    <sonar.host.url>http://10.0.2.11:9000</sonar.host.url>
+    <sonar.host.url>http://10.0.2.236:9000</sonar.host.url>
   </properties>
 
   <modules>
