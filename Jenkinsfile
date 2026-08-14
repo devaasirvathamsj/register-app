@@ -7,13 +7,13 @@ pipeline {
         maven 'Maven3'
     }
     environment {
-        APP_NAME    = "register-app"
-        RELEASE     = "1.0.0"
-        AWS_REGION  = "us-east-1"
-        ECR_REPO    = "register-app"
-        IMAGE_TAG   = "${RELEASE}-${BUILD_NUMBER}"
-        JENKINS_API_TOKEN = credentials('jenkins-api-token')
-        JENKINS_MASTER_URL = "http://10.0.2.76:8080"
+        APP_NAME            = "register-app"
+        RELEASE             = "1.0.0"
+        AWS_REGION          = "us-east-1"
+        ECR_REPO            = "register-app"
+        IMAGE_TAG           = "${RELEASE}-${BUILD_NUMBER}"
+        JENKINS_API_TOKEN   = credentials('jenkins-api-token')
+        JENKINS_MASTER_URL  = "http://10.0.2.76:8080"
     }
     stages {
         stage("Cleanup Workspace") {
@@ -77,14 +77,14 @@ pipeline {
         stage("Trivy Scan") {
             steps {
                 sh """
-                docker run \
-                -v /var/run/docker.sock:/var/run/docker.sock \
-                aquasec/trivy image ${env.IMAGE_NAME}:${IMAGE_TAG} \
-                --no-progress \
-                --scanners vuln \
-                --exit-code 0 \
-                --severity HIGH,CRITICAL \
-                --format table
+                    docker run \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy image ${env.IMAGE_NAME}:${IMAGE_TAG} \
+                    --no-progress \
+                    --scanners vuln \
+                    --exit-code 0 \
+                    --severity HIGH,CRITICAL \
+                    --format table
                 """
             }
         }
@@ -92,10 +92,10 @@ pipeline {
         stage("Push Docker Image to ECR") {
             steps {
                 sh """
-                aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${env.AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-                docker push ${env.IMAGE_NAME}:${IMAGE_TAG}
-                docker tag ${env.IMAGE_NAME}:${IMAGE_TAG} ${env.IMAGE_NAME}:latest
-                docker push ${env.IMAGE_NAME}:latest
+                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${env.AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                    docker push ${env.IMAGE_NAME}:${IMAGE_TAG}
+                    docker tag ${env.IMAGE_NAME}:${IMAGE_TAG} ${env.IMAGE_NAME}:latest
+                    docker push ${env.IMAGE_NAME}:latest
                 """
             }
         }
@@ -103,9 +103,9 @@ pipeline {
         stage("Cleanup Docker Images") {
             steps {
                 sh """
-                docker rmi ${env.IMAGE_NAME}:${IMAGE_TAG} || true
-                docker rmi ${env.IMAGE_NAME}:latest || true
-                docker system prune -af || true
+                    docker rmi ${env.IMAGE_NAME}:${IMAGE_TAG} || true
+                    docker rmi ${env.IMAGE_NAME}:latest || true
+                    docker system prune -af || true
                 """
             }
         }
@@ -121,12 +121,12 @@ pipeline {
 
     post {
         failure {
-            emailext body: '''${SCRIPT, template="groovy-html.template"}''',
+            emailext body: "<p>Build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> failed.</p><p>Check console output at <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>",
                      subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - Failed",
                      mimeType: 'text/html', to: "devaasirvathamsj@gmail.com"
         }
         success {
-            emailext body: '''${SCRIPT, template="groovy-html.template"}''',
+            emailext body: "<p>Build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> succeeded.</p><p>Check console output at <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>",
                      subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - Successful",
                      mimeType: 'text/html', to: "devaasirvathamsj@gmail.com"
         }
