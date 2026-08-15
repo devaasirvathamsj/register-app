@@ -121,14 +121,21 @@ pipeline {
 
     post {
         failure {
-            emailext body: "<p>Build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> failed.</p><p>Check console output at <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>",
-                     subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - Failed",
-                     mimeType: 'text/html', to: "devaasirvathamsj@gmail.com"
+            emailext(
+                body: '''${SCRIPT, template="groovy-html.template"}''',
+                subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - Failed",
+                mimeType: 'text/html',
+                to: "devaasirvathamsj@gmail.com"
+            )
         }
+
         success {
-            emailext body: "<p>Build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> succeeded.</p><p>Check console output at <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>",
-                     subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - Successful",
-                     mimeType: 'text/html', to: "devaasirvathamsj@gmail.com"
+            emailext(
+                body: '''${SCRIPT, template="groovy-html.template"}''',
+                subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - Successful",
+                mimeType: 'text/html',
+                to: "devaasirvathamsj@gmail.com"
+            )
         }
     }
 }
