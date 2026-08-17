@@ -13,7 +13,7 @@ pipeline {
         ECR_REPO            = "register-app"
         IMAGE_TAG           = "${RELEASE}-${BUILD_NUMBER}"
         JENKINS_API_TOKEN   = credentials('jenkins-api-token')
-        JENKINS_MASTER_URL  = "http://10.0.2.60:8080"
+        JENKINS_MASTER_URL  = "http://10.0.2.160:8080"
     }
     stages {
         stage("Cleanup Workspace") {
@@ -113,7 +113,7 @@ pipeline {
         stage("Trigger CD Pipeline") {
             steps {
                 script {
-                    sh "curl -v -k --user deva_devops:${jenkins-api-token} -X POST -H 'cache-control: no-cache' -H 'content-type: application/x-www-form-urlencoded' --data 'IMAGE_TAG=${IMAGE_TAG}' '${JENKINS_MASTER_URL}/job/gitops-register-app/buildWithParameters?token=gitops-token'"
+                    sh "curl -v -k --user deva_devops:${JENKINS_API_TOKEN} -X POST -H 'cache-control: no-cache' -H 'content-type: application/x-www-form-urlencoded' --data 'IMAGE_TAG=${IMAGE_TAG}' '${JENKINS_MASTER_URL}/job/gitops-register-app/buildWithParameters?token=gitops-token'"
                 }
             }
         }
