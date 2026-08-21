@@ -20,13 +20,13 @@ resource "aws_security_group" "eks_node_sg" {
   description = "EKS worker node security group"
   vpc_id      = var.vpc_id
 
-  ingress {
-    description = "Node to node communication"
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "-1"
-    self        = true
-  }
+ingress {
+  description = "Node to node communication"
+  from_port   = 0
+  to_port     = 0
+  protocol    = "-1"
+  self        = true
+}
 
   ingress {
     description     = "Control plane to nodes"

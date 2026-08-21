@@ -1,15 +1,15 @@
-output "ec2_a" {
-    description = "The ID of the EC2 instance in subnet 1a"
-    value = aws_instance.jenkins_master.id
+output "jenkins_master_instance_id" {
+  description = "ID of the Jenkins master EC2 instance"
+  value       = aws_instance.jenkins_master.id
+  
 }
 
-output "ec2_b" {
-    description = "The ID of the EC2 instance in subnet 1b"
-    value = aws_instance.jenkins_agent.id
+output "jenkins_agent_instance_id" {
+  description = "ID of the Jenkins agent EC2 instance"
+  value       = aws_instance.jenkins_agent.id
 }
 
-output "ec2_c" {
-    description = "The ID of the SonarQube Server in subnet 1a"
-    value = aws_instance.sonarqube_server.id
+output "sonarqube_instance_id" {
+  description = "ID of the SonarQube EC2 instance"
+  value       = aws_instance.sonarqube_server.id
 }
-

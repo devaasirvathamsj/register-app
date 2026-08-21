@@ -24,6 +24,11 @@ variable "ec2_type_for_jenkins_master_and_sonarqube" {
     type        = string
     default     = "t3.small"   
 }
+variable "ec2_type_sonarqube" {
+    description = "EC2 instance type for SonarQube server"
+    type        = string
+    default     = "c7i-flex.large"
+}
 
 variable "ec2_type" {
     description = "EC2 instance type for Jenkins agent"

@@ -1,0 +1,232 @@
+---
+# =============================================================
+# Local Automation: Install CLI tools + ArgoCD on EKS
+# Assumes: EKS cluster already created via Terraform
+# =============================================================
+- hosts: localhost
+  connection: local
+  become: false
+  vars:
+    aws_region: "us-east-1"
+    eks_cluster_name: "register-app-cluster"
+    argocd_app_name: "register-app"
+
+  tasks:
+
+    # ---------------- AWS CLI ----------------
+    - name: Check if AWS CLI is already installed
+      command: aws --version
+      register: aws_cli_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Install unzip
+      become: true
+      apt:
+        name: unzip
+        state: present
+        update_cache: yes
+      when: aws_cli_check.rc != 0
+
+    - name: Download AWS CLI v2 installer
+      get_url:
+        url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+        dest: /tmp/awscliv2.zip
+      when: aws_cli_check.rc != 0
+
+    - name: Unzip AWS CLI installer
+      unarchive:
+        src: /tmp/awscliv2.zip
+        dest: /tmp
+        remote_src: yes
+      when: aws_cli_check.rc != 0
+
+    - name: Install AWS CLI
+      become: true
+      command: /tmp/aws/install
+      when: aws_cli_check.rc != 0
+
+    - name: Verify AWS CLI installation
+      command: aws --version
+      register: aws_version_output
+      changed_when: false
+
+    - name: Show AWS CLI version
+      debug:
+        msg: "{{ aws_version_output.stdout }}"
+
+    # ---------------- kubectl ----------------
+    - name: Check if kubectl is already installed
+      command: kubectl version --client
+      register: kubectl_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Get latest stable kubectl version
+      uri:
+        url: "https://dl.k8s.io/release/stable.txt"
+        return_content: yes
+      register: kubectl_latest_version
+      when: kubectl_check.rc != 0
+
+    - name: Download latest kubectl binary
+      get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_latest_version.content | trim }}/bin/linux/amd64/kubectl"
+        dest: /tmp/kubectl
+        mode: '0755'
+      when: kubectl_check.rc != 0
+
+    - name: Move kubectl to /usr/local/bin
+      become: true
+      copy:
+        src: /tmp/kubectl
+        dest: /usr/local/bin/kubectl
+        mode: '0755'
+        remote_src: yes
+      when: kubectl_check.rc != 0
+
+    - name: Verify kubectl installation
+      command: kubectl version --client --output=yaml
+      register: kubectl_version_output
+      changed_when: false
+
+    - name: Show kubectl version
+      debug:
+        msg: "{{ kubectl_version_output.stdout }}"
+
+    # ---------------- eksctl ----------------
+    - name: Check if eksctl is already installed
+      command: eksctl version
+      register: eksctl_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Download and extract eksctl
+      shell: |
+        curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz" | tar xz -C /tmp
+      when: eksctl_check.rc != 0
+
+    - name: Move eksctl to /usr/local/bin
+      become: true
+      copy:
+        src: /tmp/eksctl
+        dest: /usr/local/bin/eksctl
+        mode: '0755'
+        remote_src: yes
+      when: eksctl_check.rc != 0
+
+    - name: Verify eksctl installation
+      command: eksctl version
+      register: eksctl_version_output
+      changed_when: false
+
+    - name: Show eksctl version
+      debug:
+        msg: "{{ eksctl_version_output.stdout }}"
+
+    # ---------------- Configure kubeconfig ----------------
+    - name: Update kubeconfig to point to the EKS cluster
+      command: >
+        aws eks update-kubeconfig
+        --region {{ aws_region }}
+        --name {{ eks_cluster_name }}
+
+    - name: Verify cluster connectivity
+      command: kubectl get nodes
+      register: nodes_output
+      changed_when: false
+
+    - name: Show cluster nodes
+      debug:
+        msg: "{{ nodes_output.stdout }}"
+
+    # ---------------- ArgoCD Installation ----------------
+    - name: Create argocd namespace
+      command: kubectl create namespace argocd
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'AlreadyExists' not in ns_create.stderr
+      changed_when: "'created' in ns_create.stdout"
+
+    - name: Apply ArgoCD install manifests
+      command: >
+        kubectl apply -n argocd -f
+        https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+        --server-side
+        --force-conflicts
+
+    - name: Wait for ArgoCD server deployment to be available
+      command: >
+        kubectl rollout status deployment/argocd-server -n argocd --timeout=300s
+
+    - name: Get latest ArgoCD CLI version
+      uri:
+        url: "https://api.github.com/repos/argoproj/argo-cd/releases/latest"
+        return_content: yes
+      register: argocd_latest_release
+
+    - name: Set ArgoCD version fact
+      set_fact:
+        argocd_version: "{{ argocd_latest_release.json.tag_name }}"
+
+    - name: Download latest ArgoCD CLI
+      get_url:
+        url: "https://github.com/argoproj/argo-cd/releases/download/{{ argocd_version }}/argocd-linux-amd64"
+        dest: "{{ lookup('env','HOME') }}/.local/bin/argocd"
+        mode: '0755'
+
+    - name: Patch argocd-server service to LoadBalancer
+      command: >
+        kubectl patch svc argocd-server -n argocd
+        -p '{"spec": {"type": "LoadBalancer"}}'
+
+    - name: Wait for LoadBalancer to be provisioned
+      pause:
+        seconds: 120
+
+    - name: Get ArgoCD server LoadBalancer hostname
+      shell: >
+        kubectl get svc argocd-server -n argocd
+        -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+      register: argocd_lb_hostname
+      changed_when: false
+
+    - name: Show ArgoCD server URL
+      debug:
+        msg: "ArgoCD is available at: {{ argocd_lb_hostname.stdout }}"
+
+    - name: Get ArgoCD initial admin password (base64 decoded)
+      shell: >
+        kubectl get secret argocd-initial-admin-secret -n argocd
+        -o jsonpath="{.data.password}" | base64 --decode
+      register: argocd_admin_password
+      changed_when: false
+      no_log: true
+
+    - name: Show ArgoCD initial admin password
+      debug:
+        msg: "ArgoCD admin password: {{ argocd_admin_password.stdout }}"
+
+    - name: Save ArgoCD access details locally
+      copy:
+        dest: "{{ lookup('env','HOME') }}/argocd-access.txt"
+        content: |
+          ArgoCD URL: https://{{ argocd_lb_hostname.stdout }}
+          Username: admin
+          Password: {{ argocd_admin_password.stdout }}
+        mode: '0600'
+
+    - name: Login to ArgoCD via CLI (non-interactive)
+      command: >
+        argocd login {{ argocd_lb_hostname.stdout }}
+        --username admin
+        --password {{ argocd_admin_password.stdout }}
+        --insecure
+      no_log: true
+
+    # ---------------- Register Git Repo with ArgoCD ----------------
+    - name: Add manifest repo to ArgoCD
+      command: >
+        argocd repo add https://github.com/devaasirvathamsj/gitops-register-app.git
+        --insecure
+      register: repo_add
+      failed_when: repo_add.rc != 0 and 'already exists' not in repo_add.stderr

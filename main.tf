@@ -42,3 +42,12 @@ module "eks" {
 module "ecr" {
   source = "./modules/ecr"
 }
+
+resource "local_file" "ansible_inventory" {
+  content = templatefile("${path.module}/ansible/inventory.tpl", {
+    jenkins_master_id = module.compute.jenkins_master_instance_id
+    jenkins_agent_id  = module.compute.jenkins_agent_instance_id
+    sonarqube_id      = module.compute.sonarqube_instance_id
+  })
+  filename = "${path.module}/ansible/inventory.ini"
+}
