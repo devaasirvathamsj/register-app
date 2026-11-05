@@ -13,7 +13,7 @@ pipeline {
         ECR_REPO            = "register-app"
         IMAGE_TAG           = "${RELEASE}-${BUILD_NUMBER}"
         JENKINS_API_TOKEN   = credentials('jenkins-api-token')
-        JENKINS_MASTER_URL  = "http://10.0.2.172:8080"
+        JENKINS_MASTER_URL  = "http://10.0.2.187"
     }
     stages {
         stage("Cleanup Workspace") {
@@ -24,7 +24,7 @@ pipeline {
 
         stage("Checkout from SCM") {
             steps {
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/devaasirvathamsj/register-app.git'
+                git branch: 'main', credentialsId: 'github-token', url: 'https://github.com/devaasirvathamsj/register-app.git'
             }
         }
 
