@@ -7,13 +7,11 @@ pipeline {
         maven 'Maven3'
     }
     environment {
-        APP_NAME            = "register-app"
-        RELEASE             = "1.0.0"
-        AWS_REGION          = "us-east-1"
-        ECR_REPO            = "register-app"
-        IMAGE_TAG           = "${RELEASE}-${BUILD_NUMBER}"
-        JENKINS_API_TOKEN   = credentials('jenkins-api-token')
-        JENKINS_MASTER_URL  = "http://10.0.2.206"
+        APP_NAME   = "register-app"
+        RELEASE    = "1.0.0"
+        AWS_REGION = "us-east-1"
+        ECR_REPO   = "register-app"
+        IMAGE_TAG  = "${RELEASE}-${BUILD_NUMBER}"
     }
     stages {
         stage("Cleanup Workspace") {
@@ -69,7 +67,7 @@ pipeline {
         stage("Build Docker Image") {
             steps {
                 script {
-                    docker_image = docker.build("${env.IMAGE_NAME}:${IMAGE_TAG}")
+                    def dockerImage = docker.build("${env.IMAGE_NAME}:${IMAGE_TAG}")
                 }
             }
         }
@@ -112,34 +110,23 @@ pipeline {
 
         stage("Trigger CD Pipeline") {
             steps {
-                sh '''
-                    curl -v -k --user deva_devops:$JENKINS_API_TOKEN -X POST \
-                    -H 'cache-control: no-cache' \
-                    -H 'content-type: application/x-www-form-urlencoded' \
-                    --data "IMAGE_TAG=${IMAGE_TAG}" \
-                    "${JENKINS_MASTER_URL}/job/gitops-register-app/buildWithParameters?token=gitops-token"
-                '''
+                build job: 'gitops-register-app',
+                      parameters: [string(name: 'IMAGE_TAG', value: "${IMAGE_TAG}")],
+                      wait: false
             }
         }
     }
 
     post {
         failure {
-            emailext(
-                body: '''${SCRIPT, template="groovy-html.template"}''',
-                subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - Failed",
-                mimeType: 'text/html',
-                to: "devaasirvathamsj@gmail.com"
-            )
+            emailext body: "<p>Build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> failed.</p><p>Console output: <a href='${env.BUILD_URL}console'>${env.BUILD_URL}console</a></p>",
+                     subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - Failed",
+                     mimeType: 'text/html', to: "devaasirvathamsj@gmail.com"
         }
-
         success {
-            emailext(
-                body: '''${SCRIPT, template="groovy-html.template"}''',
-                subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - Successful",
-                mimeType: 'text/html',
-                to: "devaasirvathamsj@gmail.com"
-            )
+            emailext body: "<p>Build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> succeeded. Image tag: <b>${IMAGE_TAG}</b></p><p>Console output: <a href='${env.BUILD_URL}console'>${env.BUILD_URL}console</a></p>",
+                     subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - Successful",
+                     mimeType: 'text/html', to: "devaasirvathamsj@gmail.com"
         }
     }
 }
